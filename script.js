@@ -1,7 +1,7 @@
 const ALL_GENRES = [
   "Drama", "Action", "Comedy", "Romance", "Thriller", "Horror", "Mystery",
   "Fantasy", "Sci-Fi", "Adventure", "Animation", "Family", "Historical",
-  "Crime", "Slice of Life", "Documentary", "Musical", "Psychological",
+  "Crime", "Slice of Life", "Documentary", "Medical", "Musical", "Psychological",
   "School", "Sports", "Suspense", "Melodrama", "Supernatural", "Coming of Age",
   "War", "Biography", "Other"
 ];
@@ -17,12 +17,12 @@ const PLATFORMS = [
 ];
 
 const THEME_PRESETS = [
+  { id: 'dark-chocolate', name: 'Dark Chocolate (Noir)', bg: '#1A1411', text: '#A97C4A' },
+  { id: 'chocolate', name: 'Chocolate Classic', bg: '#241A14', text: '#C89B5A' },
+  { id: 'cream', name: 'Cream Warmth', bg: '#382C20', text: '#B89660' },
+  { id: 'peach', name: 'Peach Blush (Modern Pink)', bg: '#38222C', text: '#F473A4' },
+  { id: 'khaki', name: 'Khaki (White Accent)', bg: '#262920', text: '#FFFFFF' },
   { id: 'professional', name: 'Professional Polish (Executive Slate & Blue)', bg: '#0F172A', text: '#3B82F6' },
-  { id: 'chocolate', name: 'Chocolate Classic', bg: '#241914', text: '#F4E5D0' },
-  { id: 'espresso', name: 'Espresso', bg: '#1D1614', text: '#F7EBE1' },
-  { id: 'cocoa', name: 'Cocoa', bg: '#2C1D1D', text: '#FADEDE' },
-  { id: 'khaki', name: 'Khaki', bg: '#22261E', text: '#EBEFE3' },
-  { id: 'cream', name: 'Cream Warmth', bg: '#3D322B', text: '#FFF5EA' },
 ];
 
 const LANGUAGES = [
@@ -220,10 +220,17 @@ let state = {
 function loadSettings() {
   const saved = localStorage.getItem('peanut_settings');
   if (saved) {
-    try { return JSON.parse(saved); } catch (e) { }
+    try {
+      const parsed = JSON.parse(saved);
+      const validTheme = THEME_PRESETS.some(p => p.id === parsed.theme);
+      if (!validTheme) {
+        parsed.theme = 'dark-chocolate';
+      }
+      return parsed;
+    } catch (e) { }
   }
   return {
-    theme: 'chocolate',
+    theme: 'dark-chocolate',
     colorMode: 'dark',
     language: 'en'
   };
@@ -901,7 +908,7 @@ function renderWatchedCard(item) {
             <span class="card-date">${escapeHtml(item.watchedDate)}</span>
           </div>
           ${item.season || item.episodes ? `
-            <p class="card-episodes">${item.season ? escapeHtml(item.season) : ''}${item.season && item.episodes ? ' • ' : ''}${item.episodes ? escapeHtml(item.episodes) + ' Episodes' : ''}</p>
+            <p class="card-episodes">${item.season ? `Season - ${escapeHtml(item.season)}` : ''}${item.season && item.episodes ? ' • ' : ''}${item.episodes ? `Episodes - ${escapeHtml(item.episodes)}` : ''}</p>
           ` : ''}
           <p class="card-genres">${item.genres.map(g => escapeHtml(g)).join(' • ')}</p>
         </div>
@@ -2268,3 +2275,4 @@ async function init() {
 }
 
 init();
+
