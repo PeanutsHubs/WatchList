@@ -1313,7 +1313,6 @@ function renderTrailerModal() {
            ${item.episodes ? `<div class="trailer-meta-item"><strong>Episodes:</strong> ${escapeHtml(item.episodes)}</div>` : ''}
            ${item.genres && item.genres.length ? `<div class="trailer-meta-item"><strong>Genres:</strong> ${escapeHtml(item.genres.join(' • '))}</div>` : ''}
          </div>
-         ${item.description ? `<p class="trailer-description">${escapeHtml(item.description)}</p>` : ''}
        </div>
      </div>
    </div>
