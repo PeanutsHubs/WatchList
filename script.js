@@ -203,6 +203,7 @@ let state = {
   selectedWatched: null,
   selectedPost: null,
   selectedTrailer: null,
+  viewImageUrl: null,
   isAddEditWatchedOpen: false,
   editingWatchedItem: null,
   isAddPostOpen: false,
@@ -1008,6 +1009,9 @@ function renderProfileTab() {
             ${state.posts.map(post => `
               <div class="post-card" data-open-post="${post.id}">
                 <img src="${escapeHtml(post.imageUrl)}" alt="Memory Post" loading="lazy" referrerpolicy="no-referrer" />
+                ${state.isOwner ? `
+                  <button class="post-card-delete" data-delete-post="${post.id}" title="Delete photo">${ICONS.trash}</button>
+                ` : ''}
               </div>
             `).join('')}
           </div>
@@ -1165,15 +1169,27 @@ function renderModals() {
     html += renderTrailerModal();
   }
 
-  if (state.selectedPost) {
-    html += renderImageViewerModal();
-  }
-
   if (state.deleteTarget) {
     html += renderDeleteConfirmModal();
   }
 
+  if (state.viewImageUrl) {
+    html += renderImageZoomModal();
+  }
+
   return html;
+}
+
+function renderImageZoomModal() {
+  return `
+    <div class="modal-overlay image-zoom-overlay">
+      <div class="modal-backdrop-blur-lg" data-close-image-view></div>
+      <div class="image-zoom-modal">
+        <button class="viewer-close" data-close-image-view>${ICONS.x}</button>
+        <img src="${escapeHtml(state.viewImageUrl)}" alt="" referrerpolicy="no-referrer" />
+      </div>
+    </div>
+  `;
 }
 
 function renderDetailModal(item) {
@@ -1183,7 +1199,7 @@ function renderDetailModal(item) {
       <div class="modal-backdrop" data-close-modal></div>
       <div class="modal-box detail-modal">
         <div class="detail-ambient" style="background-image: url('${escapeHtml(item.imageUrl)}')"></div>
-        <div class="detail-poster">
+        <div class="detail-poster" data-view-image="${escapeHtml(item.imageUrl)}">
           <img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.title)}" referrerpolicy="no-referrer" />
           <div class="detail-poster-overlay"></div>
         </div>
@@ -1532,41 +1548,6 @@ function renderEditProfileModal() {
   `;
 }
 
-function renderImageViewerModal() {
-  const post = state.selectedPost;
-  const currentIndex = state.posts.findIndex(p => p.id === post.id);
-  return `
-    <div class="modal-overlay">
-      <div class="modal-backdrop-blur-lg" data-close-modal></div>
-      <div class="modal-box viewer-modal">
-        <button class="viewer-close" data-close-modal>${ICONS.x}</button>
-        ${state.posts.length > 1 ? `
-          <button class="viewer-nav-btn viewer-prev" data-viewer-prev>${ICONS.chevronLeft}</button>
-          <button class="viewer-nav-btn viewer-next" data-viewer-next>${ICONS.chevronRight}</button>
-        ` : ''}
-        <div class="viewer-image-area">
-          <img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.caption || 'Memory Post')}" class="viewer-image" referrerpolicy="no-referrer" />
-        </div>
-        <div class="viewer-sidebar">
-          <div class="viewer-sidebar-top">
-            <div class="viewer-sidebar-header">
-              <span class="viewer-sidebar-title">PEANUT ARCHIVE MEMORY</span>
-              <span class="viewer-sidebar-count">${currentIndex + 1} of ${state.posts.length}</span>
-            </div>
-          </div>
-          ${state.isOwner ? `
-            <div class="viewer-delete">
-              <button class="btn-delete-post" data-delete-post="${post.id}">
-                ${ICONS.trash}Delete Post
-              </button>
-            </div>
-          ` : ''}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 function renderDeleteConfirmModal() {
   const t = (key) => getTranslation(state.settings.language, key);
   return `
@@ -1664,6 +1645,20 @@ function attachEventListeners() {
       state.isAddPostOpen = false;
       state.isEditProfileOpen = false;
       state.deleteTarget = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-view-image]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.viewImageUrl = el.dataset.viewImage;
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-close-image-view]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.viewImageUrl = null;
       render();
     });
   });
@@ -1856,34 +1851,15 @@ function attachEventListeners() {
       const id = el.dataset.openPost;
       const post = state.posts.find(p => p.id === id);
       if (post) {
-        state.selectedPost = post;
+        state.viewImageUrl = post.imageUrl;
         render();
       }
     });
   });
 
-  const viewerPrev = document.querySelector('[data-viewer-prev]');
-  if (viewerPrev) {
-    viewerPrev.addEventListener('click', () => {
-      const currentIndex = state.posts.findIndex(p => p.id === state.selectedPost.id);
-      const newIndex = currentIndex > 0 ? currentIndex - 1 : state.posts.length - 1;
-      state.selectedPost = state.posts[newIndex];
-      render();
-    });
-  }
-
-  const viewerNext = document.querySelector('[data-viewer-next]');
-  if (viewerNext) {
-    viewerNext.addEventListener('click', () => {
-      const currentIndex = state.posts.findIndex(p => p.id === state.selectedPost.id);
-      const newIndex = currentIndex < state.posts.length - 1 ? currentIndex + 1 : 0;
-      state.selectedPost = state.posts[newIndex];
-      render();
-    });
-  }
-
   document.querySelectorAll('[data-delete-post]').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = el.dataset.deletePost;
       handleDeletePostConfirm(id);
     });
@@ -2245,6 +2221,11 @@ function attachEventListeners() {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (state.viewImageUrl) {
+      state.viewImageUrl = null;
+      render();
+      return;
+    }
     if (state.selectedWatched || state.selectedPost || state.isAddEditWatchedOpen || state.isAddPostOpen || state.isEditProfileOpen || state.deleteTarget) {
       state.selectedWatched = null;
       state.selectedPost = null;
@@ -2257,20 +2238,6 @@ document.addEventListener('keydown', (e) => {
     }
   }
 
-  if (state.selectedPost && state.posts.length > 1) {
-    if (e.key === 'ArrowLeft') {
-      const currentIndex = state.posts.findIndex(p => p.id === state.selectedPost.id);
-      const newIndex = currentIndex > 0 ? currentIndex - 1 : state.posts.length - 1;
-      state.selectedPost = state.posts[newIndex];
-      render();
-    }
-    if (e.key === 'ArrowRight') {
-      const currentIndex = state.posts.findIndex(p => p.id === state.selectedPost.id);
-      const newIndex = currentIndex < state.posts.length - 1 ? currentIndex + 1 : 0;
-      state.selectedPost = state.posts[newIndex];
-      render();
-    }
-  }
 });
 
 async function init() {
