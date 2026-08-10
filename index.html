@@ -12,6 +12,7 @@
 <body>
   <div id="app"></div>
   <script type="module">
+    // Firebase initialisation (modular SDK v9+)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getFirestore, collection, addDoc, setDoc, deleteDoc, doc, onSnapshot, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
@@ -32,6 +33,7 @@
     const storage = getStorage(app);
     const auth = getAuth(app);
 
+    // Expose a small helper API to the non-module script
     window.__FIREBASE = {
       app,
       db,
