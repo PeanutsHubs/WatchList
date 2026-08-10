@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cy_Peanut Watchlist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, setDoc, deleteDoc, doc, onSnapshot, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+    import { getAuth, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDmVImdabWmIAg2oQgPZ24o8IpToaQEA6U",
+      authDomain: "watched-40e0e.firebaseapp.com",
+      projectId: "watched-40e0e",
+      storageBucket: "watched-40e0e.firebasestorage.app",
+      messagingSenderId: "119970061002",
+      appId: "1:119970061002:web:c05e8eb5bc390270533233",
+      measurementId: "G-4BLLQTYMNW"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    const auth = getAuth(app);
+
+    window.__FIREBASE = {
+      app,
+      db,
+      storage,
+      auth,
+      async signIn(email, password) {
+        return signInWithEmailAndPassword(auth, email, password);
+      },
+      async signOut() {
+        return fbSignOut(auth);
+      },
+      onAuthStateChanged(cb) {
+        return onAuthStateChanged(auth, cb);
+      },
+      getCurrentUser() {
+        return auth.currentUser || null;
+      },
+      async createDoc(collectionName, data) {
+        const docRef = await addDoc(collection(db, collectionName), { ...data, createdAt: serverTimestamp() });
+        return docRef.id;
+      },
+      async setDocById(collectionName, id, data) {
+        await setDoc(doc(db, collectionName, id), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+        return id;
+      },
+      async deleteDocById(collectionName, id) {
+        await deleteDoc(doc(db, collectionName, id));
+      },
+      onCollectionSnapshot(collectionName, cb) {
+        const q = query(collection(db, collectionName), orderBy('createdAt', 'desc'));
+        return onSnapshot(q, (snapshot) => {
+          const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          cb(items);
+        });
+      },
+      onDocSnapshot(collectionName, id, cb) {
+        return onSnapshot(doc(db, collectionName, id), (snap) => {
+          if (snap.exists()) cb({ id: snap.id, ...snap.data() });
+          else cb(null);
+        });
+      },
+      async getCollectionOnce(collectionName) {
+        const snaps = await getDocs(collection(db, collectionName));
+        return snaps.docs.map(d => ({ id: d.id, ...d.data() }));
+      },
+      uploadImage(file, path, onProgress) {
+        return new Promise((resolve, reject) => {
+          const storageReference = storageRef(storage, path);
+          const uploadTask = uploadBytesResumable(storageReference, file);
+          uploadTask.on('state_changed', (snapshot) => {
+            const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            if (onProgress) onProgress(pct);
+          }, (error) => {
+            reject(error);
+          }, async () => {
+            try {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(url);
+            } catch (e) { reject(e); }
+          });
+        });
+      }
+    };
+  </script>
+
+  <script defer src="script.js"></script>
+</body>
+</html>
